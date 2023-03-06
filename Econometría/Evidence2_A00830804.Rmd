@@ -1,0 +1,404 @@
+---
+title: "Evidence 2"
+author: "Arantza Isaías"
+date: '2022-09-10'
+output: 
+  html_document:
+    theme: cosmo
+    highlight: pygments
+    toc: true
+    toc_depth: 4
+    number_sections: false
+    toc_float:
+      smooth_scroll: FALSE
+      collapsed: FALSE
+---
+
+```{r message=FALSE, warning=FALSE}
+#Loading libraries
+library(xts)
+library(zoo)
+library(tseries)
+library(stats)
+library(forecast)
+library(astsa)
+library(corrplot)
+library(AER)
+library(vars)
+library(dynlm)
+library(vars)
+library(mFilter)
+library(tseries)
+library(TSstudio)
+library(forecast)
+library(tidyverse)
+library(sarima)
+library(vars)
+library(foreign)
+library(dplyr)        
+library(forcats)     
+library(ggplot2)      
+library(readr)        
+library(janitor)      
+library(Hmisc)        
+library(psych)        
+library(naniar)      
+library(dlookr)       
+library(corrplot)     
+library(jtools)        
+library(lmtest)       
+library(car)      
+library(olsrr)        
+library(naniar)      
+library(funModeling) 
+library(stargazer)    
+library(effects)      
+library(tidyverse)    
+library(glmnet)
+library(mice)
+library(rlang)
+library(Metrics)
+library(tidyverse)
+library(gridExtra)
+library(readxl)
+```
+
+# **Introduction**
+Time series analysis uses data time series data, that can be consider to be data points ordered successively across time, its main goal is mostly to generate a forecast for the future (Peixeiro, 2019). A time series has 3 components: trend is the linear increase or decrease over time, seasonality refers to patterns or cycles that might happen and random is the inexplicable variability. 
+
+For the model creating process involves choosing one of the different methods, which are ARMA, ARIMA and SARIMA. There are also 3 main concerns in order to consider a model good:
+ - **Stationary:** the data should have a constant mean and variance.
+ - **Seasonality:** periodic changes and is one of the components.
+ - **Serial autocorrelation:** when an error from one period is transferring to others. 
+
+(Pandian, 2021)
+
+A good model deals with any problems ans trsnsforms the data accordingly in order to get a proper forecast that can create a "look" into the future to understand how to prepare.  
+
+# **Background**
+
+Financial inclusion is a subject in which Mexico has been working to improve and COVID-19 pandemic has only emphasize its need and importance, thanks to government efforts more than 174,000 credits have been given to population that usually dos not have a formal type of credit, this population includes poor and rural populations, women, young people, and Micro, Small or Medium-sized enterprises, also known as MSMEs. But why financial inclusion is such a big problem? Just 37% of our adults have an account and 32% have made or received payments in a digital way, a situation like this has multiple causes due to its complexity, but one is the large impact of the MSMEs as they are the most common type of business and supply 70% of the jobs even though just 11% have credit provided by bank. (The World Bank, 2021) 
+
+Vulnerable population tends to not be in an economically privileged situation and access to credit, additionally to have an financial education, would be an impulse to improve their situation; in the case of rural MSMEs they could increase their economic activity and help combat economic inequality; the South of the country is an area is a victim of this problem. (World Bank, 2021)  
+
+The credit to households has improved from 205.764 USD in September 2021 to 209.013 USD in December 2021, a slow but sure increase after the hit from the pandemic and the household debt in percentage of the GDP is now lowering; both indicators show a better financial situation in households in comparison to previous periods. (CEIC DATA, 2021)
+
+Even though the credit to households is getting better, the vulnerable population still is having a hard time accessing to one because as explained in evidence 1
+"In Mexico 24.6 million people have had access to formal financing and 19.2 millions to credit cards, but this access is determined by a number of factor the main ones being a high income (which increases the probabilities of getting on by a 10% and 7% the chances of using it), living on a urban area, being 30 to 39 years old, having a bachelor's degree or a higher degree as well as a formal job. On the other hand, people who do not have formal financing it is because of the possibility of ending up in debt, are not interested or the requirements discourages from getting one; out of the whole population if the country, 44.6 millions have never had a formal credit in their life (EDIF, 2021)."
+The characteristics of people with more probabilities to have a credit cards are not representative of the majority of the Mexican population, therefore the privileged ones keep having more advantages while the rest still face inequality with no tools to be able to progress. 
+
+A difficult situation can also be an opportunity, the World Bank seems to be aware of this since it created the Expanding Rural Finance Project which was the organism that provided the 174,000 credits mentioned before; these credits were given to a segment that otherwise could not get one, like rural producers or MSMEs with mainly with women as the recipients, other recipients live in marginalized or highly marginalized communities mostly located at the South and with a high presence of indigenous people.
+Fintechs could also be part of the solution in the view that multiple of them have been launching their own credit cards, either by themselves or as part of a collaboration with a bank (Passport, 2021). A fintech is characterized for its innovation and that exactly what Mexico needs in order to face the economic inequality. Financial Inclusion DPF is one of the legal reforms that can make this happen in a easier and faster way. (World Bank, 2021)
+
+
+# **Description of the Problem Situation** 
+ 
+In Mexico there are over 33 million credit cards in use, which only represents an increase of 1% according to the previous year (Passport, 2021), this is not unexpected since a great portion of the Mexican population prefer informal financing (39%) and a even greater portion does not have one at all (43%), this segment tends to not have access to credit cards because of their life style (young, informal job, minimal wage, lives in a rural area and/or does not have higher education), but there are people who knowingly choose not to have a credit card to avoid being in debt and yet when the most popular motive to use informal financing is due to over spending.  
+ 
+Meanwhile customers are not avid to use their credit cards more than once or twice a month and mostly for emergencies since they also are scare of being in debt, whereas only 9% of the users that do not use their credit cards is because of interest (EDIF, 2021), although more than 40% do not pay properly and end up paying more interest as described before (Torres, 2022).
+
+All of this is part of a much bigger problem that has several severe consequences in Mexico, this is the low financial inclusion; outdated laws, lack of financial education and not using available resources are some of the reasons that to this day this is an existing problem. To battle the ever so present fear of being in debt is necessary to teach how to manage incomes and spendings in a responsible and accessible way from an early age; in Mexico most of the population have access to a mobile phone and the coverage is relatively good in the better part of the territory, so the logical step for a better financial inclusion is to enable mobile approach to formal financing as well as updating the regulations to allow financial organisms to innovate rather than to be stucked (IMCO, 2020).
+
+# **Data and Methodology**
+
+```{r}
+#Importing Database
+data <- read_xlsx("C:/Users/dell/Documents/R_programa/Econometria/ev2_data.xlsx")
+```
+
+## **Describe the dataset’s variables** 
+```{r}
+#Data's structure
+str(data)
+```
+The dataset has 109 observations and 7 variables, which are:
+- **date:** period of time - quarterly basis.
+- **credit_to_households:** Total credit to households and non-profit institutions serving households, unadjusted for breaks. Billions of Mexican Pesos, Not Seasonally Adjusted. Source: Federal Reserve Bank of St. Louis.
+- **inflation_rate:** Rate at which prices for goods and services rise over a time period.
+- **gdp_growth:** GDP: measures the value of final goods and services produced in the U.S. GDP growth rate. 
+- **unemployment:** Percentage of the total labor force that is unemployed.
+- **consumer_confidence:** Referencia a la situación económica actual y esperada del hogar del entrevistado.
+- **remittances:** Money or goods that migrants send back to families and friends in origin countries (Migration Data Portal). Millions of Dollars.
+
+Date was detected in a date data type and the other ones as numeric, therefore, no data transformation will be needed. 
+
+## **Select variables**
+```{r}
+data <- data[complete.cases(data),]
+```
+Since some variables have empty observations, the information was filter in order to have complete data for all variables. 
+
+## **Plot the variable credit_to_households using a time series format** 
+```{r}
+#Converting the variable to time series format
+CtH<-ts(data$credit_to_households,start=c(2005,1),end=c(2021,12),frequency=4)
+
+#Plot
+ts_plot(CtH)
+```
+The variable had a very clear positive tendency up until 2022, when it had a great fall, but now it seems to be recovering. 
+
+### **Decompose the time series data into trend, seasonal, and random components. Briefly, describe the decomposition time series plot.  Do the time series data show a trend? Do the time series data show seasonality?**
+```{r}
+data2<-ts(data$credit_to_households,frequency=4,start=c(2005,1))
+data_CtH<-decompose(data2)
+plot(data_CtH)
+```
+Thanks to the decomposition of credit_to_households we are able to observe, once again, the trend component has a positive linear just like the observed. About the seasonal one, it is present in constant way throughout time, at the beginning of each year it rises then has a mild drop, increases once again just to fall one more time before the next year. Something interesting in the random component is that in 2008 there is an increase just as a economical crisis hit our country and at the end of 2019 there was a decrease just as another economical crisis was occurring due to the COVID-19 pandemic. 
+
+### **Detect the presence of stationary**
+```{r}
+#Test the data to show if it is stationary.
+adf.test(data$credit_to_households)
+plot(data$credit_to_households)
+```
+The data proves to be non-stationary because the p value of the ADF test is over 0.05 and is actually 10 time this (0.5435). There is not a constant mean or variance in the analyzed time frame as shown in the plot.
+
+### **Detect the presence of serial autocorrelation**
+```{r}
+#Serial autocorrelation 
+Box.test(data$credit_to_households,lag=1,type="Ljung-Box") 
+acf(data$credit_to_households)
+```
+The result of the box test is 6.661e-16, being so small, there is definitely serial autocorrelation; the ADF plot confirms this since most periods have a higher coefficient than the acceptable range (-0.225 to 0.225). 
+
+## **Does credit_to_household require a seasonal adjustment? If yes, please display the seasonal adjustment in a time series plot**
+```{r}
+CtH_SA = data2 - data_CtH$seasonal
+par(mfrow=c(1,2))
+plot(data$date,data$credit_to_households, type="l",col="blue", lwd=2, xlab ="Date",ylab ="Credit to household", main = "Credit to household")
+plot(CtH_SA,type="l",col="blue",lwd=2, xlab ="Date",ylab ="Credit to household",main="Credit to household - Seasonal Adjustment")
+```
+As explained before, there is a seasonal component and consequently a seasonal adjustment is needed to have a better analysis. The smoothing effect is observable, even though in a slight way. 
+
+# **Time Series Regression Analysis** 
+
+## **Time Series Model 1**
+
+### **Estimate 3 different time series regression models. You might want to consider ARMA (p,q), ARIMA (p,d,q), and / or SARIMA (p,d,q) (P,D,Q)m**
+
+**Model 1**
+```{r}
+summary(ARMA<-arma(data$credit_to_households, order=c(1,4)))
+ARMA.residuals<-(ARMA$residuals)
+ARMA.residuals<-na.omit(ARMA.residuals)
+```
+The AIC is the indicator to identify the best model, in the case of the ARMA (1,4) it turned out to be 681.2. 
+
+**Model 2**
+```{r}
+ARIMA<-Arima(data$credit_to_households,order=c(2,1,1))
+print(ARIMA)
+```
+An ARIMA with 2,1,1 has an AIC of 681.58, which is just slightly higher than the ARMA.  
+
+**Model 3**
+```{r}
+SARIMA<-Arima(data$credit_to_households,order=c(1,3,1),seasonal=list(order=c(1,3,1), period=4))
+print(SARIMA)
+```
+In the case of the seasonal ARIMA (1,3,1), also known as SARIMA, its AIC is 632.14 the lowest of them all. 
+
+### **Based on diagnostic tests, compare the 3 estimated time series regression models and select the results that you consider might generate the best forecast**
+
+**Model 1**
+```{r}
+#Test the data to show if it is stationary
+adf.test(ARMA.residuals)
+plot(ARMA$residuals,main="ARMA(1,4) - Credit in household")
+
+#Serial autocorrelation 
+Box.test(ARMA$residuals,lag=1,type="Ljung-Box") 
+acf(ARMA.residuals,main="ACF - ARMA (1,4)")
+```
+The ARMA model is stationary due to the fact that the p value foe the ADF test is less than 0.05, but it is still close to not be; in the plot some scattered values that could cause this, even though their effect is not enough to make the data non-stationary.
+There result of the box test was 0.8445 and therefore no presence of serial autocorrelation is detected. In the ACF plot all periods, except the first one, are inside the -0.225 to 0.225 range.
+
+**Model 2**
+```{r}
+#Test the data to show if it is stationary
+adf.test(ARIMA$residuals)
+plot(ARIMA$residuals,main="ARIMA(2,1,1) - Credit in household")
+
+#Serial autocorrelation 
+Box.test(ARIMA$residuals,lag=1,type="Ljung-Box") 
+acf(ARIMA$residuals,main="ACF - ARIMA (2,1,1)") 
+```
+On the other hand, ARIMA model is also stationary because its results on the ADF test are less that 0.05, in the plot some substantial are easy to spot and yet they do not make the data non-stationary.
+Serial autocorrelation will not be a problem in this model as the box test result is over 0.05 and in the ACF plot every value in inside the appropriate blue line range.
+
+**Model 3**
+```{r}
+#Test the data to show if it is stationary
+adf.test(SARIMA$residuals)
+plot(SARIMA$residuals,main="SARIMA(1,3,1) - Credit in household")
+
+#Serial autocorrelation 
+Box.test(SARIMA$residuals,lag=1,type="Ljung-Box") 
+acf(SARIMA$residuals,main="ACF - SARIMA (1,3,1)") 
+```
+Finally, the SARIMA model indicates a stationary data seeing that p value of the ADF is 0.01972 (less than 0.05). In this plot, some dramatic drops and rises are present, but not enough to make to make it non-stationary.
+Serial autocorrelation is not a problem in this model as the result of the box test is over 0.05, it is 0.5768. Most values are inside the -0.225 to 0.225 range, with the exception of the first period an another one between 5 and 10 lagged periods.
+
+### **By  using  the  selected model, make  a  forecast  for  the  next  5  periods.  In  doing  so,  include  a time series plot showing your forecast** 
+
+All of the models are stationary with no serial autocorrelation, therefore the main factor to choose a model was the AIC values; model 3, SARIMA, had the lowest result and is considered to be the best model.
+```{r}
+forecast1<-forecast(SARIMA$fitted,h=5)
+forecast1
+
+plot(forecast1)
+autoplot(forecast1)
+```
+The results of the forecast seem to be correct, no drastic changes are present and the values are inside a stable range. 
+Theses results and the visualizations indicate an increase in the next 5 periods, blue line.
+
+## **Time Series Model 2** 
+
+### **From the time series dataset, select the explanatory variables that might affect the total credit to households in Mexico**
+```{r}
+par(mfrow=c(2,2))
+plot(data$credit_to_households, type="l",col="light blue",lwd=2,main="Credit to households")
+plot(data$date, data$gdp_growth,type="l",col="gray19",lwd=2,xlab="Date",ylab="gdp_growth",main="GDP growth")
+plot(data$date,data$unemployment,type="l",col="gray19",lwd=2,xlab="Date",ylab="unemployment",main="Unemployment")
+plot(data$date,data$remittances,type="l",col="gray19",lwd=2,xlab="Date",ylab="remittances",main="Remittances")
+```
+The GDP growth was selected because is an indicator related to how well the country is doing economically and financially and could affect the credit in households. Unemployment can be highly related since it affects greatly the financial situation of a household. Remittances are one of the most common way of income in Mexico and therefore should be consider to be important. 
+
+### **Describe  the  hypothetical  relationship  /  impact  between  each  selected  factor  and  the dependent  variable  credit_to_household.  For  example,  how  does  the  unemployment  rate increase / reduce the credit to households in Mexico?** 
+A higher GDP can signify that getting access to a credit would be somewhat easier that when this values is lower, because the country is doing well economically speaking. Therefore is one increases the other one too. 
+Unemployment has the opposite effect, a person without a job is not consider to be fit to have a credit since it is high risk they will not be able to pay, so the more people are unemployed the less credit to household exists. 
+Remittances are a way of income that is popular in Mexico and as any source of income it can be useful to get a credit and it probably has a positive relationship with credit in household. 
+
+### **In  describing  the  above  relationships,  please  include  a  time  series  plot  that  displays  the selected variables’ performance over the time period**
+```{r}
+#Converting the variable to time series format
+gdpG<-ts(data$gdp_growth,start=c(2005,1),end=c(2021,12),frequency=4)
+unemployment<-ts(data$unemployment,start=c(2005,1),end=c(2021,12),frequency=4)
+remittances<-ts(data$remittances,start=c(2005,1),end=c(2021,12),frequency=4)
+
+#Plot
+ts_plot(gdpG)
+ts_plot(unemployment)
+ts_plot(remittances)
+```
+The growth on the GDP is somewhat constant, except for periods related to economical crisis, like in 2008 and 2019 to 2022.
+Related to the previous variable, unemployment spikes when Mexico is undergoing an crisis in the economical aspect, this is logical since is common for people to lose their job in those periods. 
+Remittances constantly drops and rises, from 2010 to 2021 it was increasing up until 2022 when it had a great drop, but now is recovering; the great fall could be related to the stabilization in the economy as now people in others countries did not have to send money because it was the only source of income.  
+
+
+### **Estimate a VAR_Model that includes  at  least  1 explanatory factor that might  affect  each of the selected stocks prices**
+
+```{r}
+CtH_ts<-cbind(CtH,unemployment, gdpG, remittances)
+colnames(CtH_ts)<-cbind("CtH","unemployment", "gdpG", "remittances")
+
+#Check what is the ideal lag
+lag_CtH<-VARselect(CtH_ts,lag.max=5,type="const", season=4)
+lag_CtH$selection
+lag_CtH$criteria
+```
+The ideal lag is 5 in order to get the a lower AIC possible. 
+
+```{r}
+#Making the model
+vmodel_CtH<-VAR(CtH_ts,p=5,type="const",season=4)
+summary(vmodel_CtH)
+```
+All variables at some point were statistically significant, even the credit to household variable itself, how significant they are changes throughout the lagged periods.
+
+### **Detect if the estimated VAR_Models residuals are stationary**
+
+**VAR model 3**
+```{r}
+VAR_CtH_residuals<-data.frame(residuals(vmodel_CtH))
+adf.test(VAR_CtH_residuals$CtH)
+plot(VAR_CtH_residuals$CtH,type="l",main="Credit to household")
+```
+The p value of the ADF test is 0.01452, this is less than 0.05 and therefore the data is stationary. In the plot peaks can be seen but a constant mean and variance are present. 
+
+### **Detect if the estimated VAR_Models residuals show serial autocorrelation** 
+
+**VAR model3**
+```{r}
+Box.test(VAR_CtH_residuals$CtH,lag=1,type="Ljung-Box")
+acf(VAR_CtH_residuals$CtH,main="ACF Credit to household") 
+```
+Serial autocorrelation is not a problem since the box test p value is over 0.05, it is 0.8445. The ADF plot confirms this as most values are inside the -0.225 to 0.225 range, except for period 1, which is normal. 
+
+### **Based on the regression results and diagnostic tests, select the VAR_Model that you consider might generate the best forecast**
+```{r}
+AIC(vmodel_CtH)
+sqrt(mean(VAR_CtH_residuals$CtH^2))
+```
+The VAR model has a AIC of 2203.762 and a RMSE 166.9554, they are used to compare models and identify the best one. The less the better because it means that the observed dependent variable and the predicted are alike. 
+
+### **Briefly interpret the regression results. That is, is there a statistically significant relationship between the explanatory variables and the main dependent variable?**
+As there ar multiple variables that are statistically significant it is simpler to list them:
+ **1.** Unemployment lagged 2 periods, GPD growth lagged 3 periods and credit to household lagged 1 period.
+ **2.** GPD growth lagged 1 period, unemployment lagged 3 periods and GPD growth lagged 4 periods. 
+ **3.** GPD growth lagged 2 periods and remittances lagged 2 periods.
+ 
+Unemployment lagged 4 periods is also significant, but not with a higher confidence level as wanted. 
+
+It can be observed that unemployment and GPD growth have a statistically significant relationship with credit to household throughout several lagged periods, whereas remittances only was significant when lagged 2 periods, this time seems to be during the COVID-19 pandemic in which remittances where extremely important to Mexico's economy since, for some households, the only income at that time. 
+Unemployment and GPD growth are related to the dependent variable in a constant ways, meanwhile remittances is occasional. 
+
+### **Is there an instantaneous causality between credit_to_household and the selected explanatory variables?  Estimate a Granger Causality Test to either reject or fail to reject the hypothesis of instantaneous causality** 
+
+```{r}
+granger_vm<-causality(vmodel_CtH,cause="CtH")
+granger_vm
+```
+The p value is less than 0.05 which means that the alternative hypothesis cannot be rejected, that establish that the time series causes the independent and therefore we can accept that unemployment, remittances and GDP growth cause credit to household to change. Bidirectional unidirectional causality exists indicating that credit to household cause or affect the unemployment remittances and/or GDP growth. Unidirectional causality also exists.
+
+### **Based on the selected VAR_Model, forecast the total credit to households in Mexico for the next 5 periods. Display the forecast in a time series plot** 
+```{r}
+forecast_var<-predict(vmodel_CtH,n.ahead=5,ci=0.95)
+fanchart(forecast_var,names="CtH",main="Credit to household",xlab="Time Period",ylab="Credit to household")
+forecast_var
+```
+In the next 5 periods the results are: 
+ **1.** Range 1735.588 to 931.2127 or more precisely around 1333.400
+ **2.** Range 1920.517 to 756.1825 with a forecast of 1338.350
+ **3.** Range 1898.862 to 491.6792 and precisely around 1195.271
+ **4.** Range 2115.862 to 661.2658 and the forecast turned out to be 1388.564
+ **5.** Range 2250.625 to 656.2681 or, as a specific number, 1453.447
+
+The prediction is that credit to household will continue to grow except for the 3 predicted period, in which it will drop to rise again in the next 2 periods. Also, the further away the predicted period, the interval is bigger. The forecast starts with 1333.400 to end up with 1453.447.
+
+# **Conclusions and Recommendations**
+
+## **Briefly describe the main insights from previous sections** 
+
+Credit to households is going to keep growing in the next periods periods, but in a rather slow rate and therefore projects like Expanding Rural Finance Project are much needed to have a greater rate. 
+
+The people who have easy access to credits are not the majority of the population and a specific credit for them show be created in order to have more people with a credit, which would mean an additional income. In the south and center of Mexico there is a bigger opportunity area than in the rest of the country to incentive the usage of credit cards.
+
+Smartphones can be used as a tool to inform the general public about credit and how to learn and access to it, this could reduce the fear of overspending. 
+
+SMEs are the enterprises that generate the most jobs, therefore they should be able to access to credits created with them on mind; which most definitely would produce more and better jobs combating unemployment, that has a significant relationship with credit to household. Something like this would affect positively the GDP, another significant relationship of the dependent variable. 
+
+## **Based  on  the  selected  results,  please  share  at  least  1  recommendation  that  address  the problem situation**
+The company should create a credit focused in the population that rarely can get one with lower interest rates and easy to understand parameters, by doing this Financiera Ma is targeting a unseen segment and creating new opportunities for itself as well as at the same time reduces economic inequality; by giving credits to young people the company will have more long term clients since users tend to stick to one bank, SMEs in rural communities are much needed an by having access to a credit they can grow and this will be an incentive to make the business formal (which will help Mexico's economy in multiple ways), women could create a SMEs in a more efficient way and help rise the presence of women in power positions. A credit like this should basic and work in a transient manner to help people match the conditions for more complete credit; at the end of the day, a credit is an additional income that could have a great effect in the living conditions of the vulnerable population. 
+
+Another suggestion is to partner with a fintech a make credit accessible through cellphones, since most population have one and it could even contain free courses on financial education. This would generate more clients additionally to a better informed country. 
+
+# **Bibliography**
+Passport. (2021). Credit cards in Mexico. Website https://www.euromonitor.com/credit-cards-in-mexico/report
+
+EDIF. (2021). El crédito en México. Website: https://www.gob.mx/cms/uploads/attachment/file/624795/Estudio_Credito.pdf
+ 
+Torres, Y. (2022). ¿Usas tarjetas de crédito? Evita que el alza en las tasas de interés de Banxico te afecte. Website: https://www.eleconomista.com.mx/finanzaspersonales/Usas-tarjetas-de-credito-Evita-que-el-alza-en-las-tasas-de-interes-de-Banxico-te-afecte-20220626-0028.html
+
+IMCO. (2020). EL ROMPECABEZAS DE LA INCLUSIÓN FINANCIERA EN MÉXICO. Website: https://imco.org.mx/el-rompecabezas-de-la-inclusion-financiera-en-mexico/
+
+Peixeiro, M. (2019). The Complete Guide to Time Series Analysis and Forecasting. Website: https://towardsdatascience.com/the-complete-guide-to-time-series-analysis-and-forecasting-70d476bfe775
+
+Pandian, S. (2021). A Comprehensive Guide to Time Series Analysis. Website: https://www.analyticsvidhya.com/blog/2021/10/a-comprehensive-guide-to-time-series-analysis/
+
+World Bank. (2021). Expanding Financial Access for Mexico’s Poor and Supporting Economic Sustainability. Website: https://www.worldbank.org/en/results/2021/04/09/expanding-financial-access-for-mexico-s-poor-and-supporting-economic-sustainability 
+
+CEIC DATA. (2021). Mexico Credit to Households. Website: https://www.ceicdata.com/en/indicator/mexico/credit-to-households
+
+

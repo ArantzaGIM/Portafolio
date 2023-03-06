@@ -1,0 +1,335 @@
+---
+title: "Evidence 1"
+author: "Arantza Isaías"
+date: '2022-08-24'
+output: 
+  html_document:
+    theme: cosmo
+    highlight: pygments
+    toc: true
+    toc_depth: 4
+    number_sections: false
+    toc_float:
+      smooth_scroll: FALSE
+      collapsed: FALSE
+---
+
+```{r message=FALSE, warning=FALSE}
+#Importing Libraries
+library(foreign)
+library(dplyr)        
+library(forcats)     
+library(ggplot2)      
+library(readr)        
+library(janitor)      
+library(Hmisc)        
+library(psych)        
+library(naniar)      
+library(dlookr)       
+library(corrplot)     
+library(jtools)        
+library(lmtest)       
+library(car)      
+library(olsrr)        
+library(naniar)      
+library(funModeling) 
+library(stargazer)    
+library(effects)      
+library(tidyverse)    
+library(glmnet)
+library(mice)
+library(rlang)
+library(Metrics)
+library(tidyverse)
+library(gridExtra)
+```
+# Introduction  
+
+Linear regression analysis is one of the oldest, yet simpler, ways to predict the behavior of a dependent variable, it uses one or more independent variables to do such thing and shows if that variable(s) are actually capable of making a good model. Do not let this simplicity fool you, this analysis method is use in a variety of real-life applications that can be interpreted easily by anyone that has the basics notions (IBM, n/d).
+Linear regression allowed the creation of other more specific and advanced methods and yet it is still considered by some as the go-to option while doing predictions and future plans (Indeed, 2021). 
+
+# Background  
+
+In Mexico 24.6 million people have had access to formal financing and 19.2 millions to credit cards, but this access is determined by a number of factor the main ones being a high income (which increases the probabilities of getting on by a 10% and 7% the chances of using it), living on a urban area, being 30 to 39 years old, having a bachelor's degree or a higher degree as well as a formal job. On the other hand, people who do not have formal financing it is because of the possibility of ending up in debt, are not interested or the requirements discourages from getting one; out of the whole population if the country, 44.6 millions have never had a formal credit in their life (EDIF, 2021).
+
+As seen before, the segment that does have a credit card is extremely small and actually most of them prefer a department store credit card rather than a bank's, at first glance they look great since they are part of a business that the user is already familiar with, have months without interest, discounts, promotions, fidelity programs and more (Procuraduría Federal del Consumidor, 2019), but in reality they can be 3 times more expensive than a bank's because the minimum interest rate can be 70% yearly whereas a credit card from a bank can go from 25 to 65%. Stores like Palacio de Hierro, Liverpool, Suburbia, Coppel and Elektra are able to achieve this popularity thanks to how well they know their market segment, specially the ways to attract them; this type of formal credit has such a great power that it is the only one whose tenure grew in 2021 (Rodríguez, 2022). 
+
+The economic crisis that arose from the COVID pandemic had many consequences on the subject of credit cards, being the more notorious one the high inflation that provoked an increase on interest rates, for a consumer it means paying more interest without a real income growth. This situation will affect millions of people since 40.7% of the population with a credit card pay the minimum balance of their card or pay less than the monthly debt (Torres, 2022). 
+
+At the moment, the credit card world is barely recovering in our country but the users of this type of financing are still cautious about spending with them; online shopping and payment processors, like Clip, motivate the usage of credit cards since they became popular in recent years thanks to low fees and acceptance of all types of cards. 
+
+A crisis can also be an opportunity, which was noticed by diverse fintechs since multiple of them have been launching their own credit cards, either by themselves or as part of a collaboration with a bank; the new competitors do not stop traditional banks to keep developing products, resulting in a overwhelming offer that tends to make harder for the customers to pick one that suits them. Younger generations gravitate towards more digital and technological developed options, yet Banco Bilbao Vizcaya Argentaria SA, a tradicional bank, is leading the market at the moment. In the future banks are expected to increase their credit card promotion to highlight the product and have better anti-fraud measures (Passport, 2021). 
+ 
+# Description of the Problem Situation 
+ 
+ In Mexico there are over 33 million credit cards in use, which only represents an increase of 1% according to the previous year (Passport, 2021), this is not unexpected since a great portion of the Mexican population prefer informal financing (39%) and a even greater portion does not have one at all (43%), this segment tends to not have access to credit cards because of their life style (young, informal job, minimal wage, lives in a rural area and/or does not have higher education), but there are people who knowingly choose not to have a credit card to avoid being in debt and yet when the most popular motive to use informal financing is due to over spending.  
+ 
+Meanwhile customers are not avid to use their credit cards more than once or twice a month and mostly for emergencies since they also are scare of being in debt, whereas only 9% of the users that do not use their credit cards is because of interest (EDIF, 2021), although more than 40% do not pay properly and end up paying more interest as described before (Torres, 2022).
+
+All of this is part of a much bigger problem that has several severe consequences in Mexico, this is the low financial inclusion; outdated laws, lack of financial education and not using available resources are some of the reasons that to this day this is an existing problem. To battle the ever so present fear of being in debt is necessary to teach how to manage incomes and spendings in a responsible and accessible way from an early age; in Mexico most of the population have access to a mobile phone and the coverage is relatively good in the better part of the territory, so the logical step for a better financial inclusion is to enable mobile approach to formal financing as well as updating the regulations to allow financial organisms to innovate rather than to be stucked (IMCO, 2020). 
+
+# Data and Methodology  
+
+```{r}
+#Importing Database
+data <- read.csv("C:/Users/dell/Documents/R_programa/Econometria/ev1_data.csv") 
+```
+
+## Data's description 
+```{r}
+#Data's structure
+str(data)
+```
+Each variable has a meaning, these are: 
+- region:	six geographic regions (1 = northwest, 2 = northeast, 3 = occident and lowland, 4 = Mexico City, 5 = south-center and orient, 6 = south )
+- useCard:	number of times the credit card is used (bank or store) per month 
+- dCard:	1 if the credit card is used at least once a month
+- income:	monthly income in thousand pesos
+- education: 1 if undergraduate level or higher
+- age: age in years
+- age2:	age squared
+- dPhone:	1 if owns a smartphone
+
+
+```{r}
+#Identify missing values 
+sum(is.na(data))      
+colSums(is.na(data))  
+gg_miss_var(data) 
+```
+Income is the only variable with a presence of NAs, having 238 of them. 
+
+```{r}
+#Imputation
+data2 <- data
+
+data2["income"][data2["income"] == 0] <- NA
+
+dataimp <- mice(data2,m=1,maxit=5,meth='mean',seed=5, print=FALSE)%>% complete(1)
+
+```
+The mean was used to impute, NAs and 0s, since in following analysis it will allow to generate conclusions based on a more normalized variable. 
+
+```{r}
+#Data transformation
+dataimp$region<-as.character(dataimp$region)
+dataimp$dCard<-as.factor(dataimp$dCard)
+dataimp$education<-as.factor(dataimp$education)
+dataimp$dPhone<-as.factor(dataimp$dPhone)
+```
+To prevent mistakes, region is changed as character, while dCard, education and phone are changed to factor due to their nature and that the following analysis need it. 
+
+## Exploratory data analysis 
+```{r}
+#Proportion of people registered and people who use a credit card at least once a month by region
+data %>% group_by(region) %>% summarise(pbr= n(),pwucc = sum(dCard)) %>% mutate(proportion = pwucc/pbr*100)
+```
+In most regions, the proportion reveals that a little bit less than the half of the population have a credit card that they use at least once a month. 
+Region 4, Mexico City, is the only one with almost 60%; this could be thanks to it being a urban zone, have better paying jobs and more access to higher education. 
+
+```{r}
+#Average income by region 
+data %>% group_by(region) %>% summarise(pbr= n(), total_i = sum(income, na.rm=TRUE)) %>% mutate(avarage_i = total_i/pbr)
+```
+This dataset does not consider the imputed information and as we can see, region 1 and 4 have the highest incomes while regions 5 and 6 have the lowest.
+
+### Descriptive statistics 
+```{r}
+summary(dataimp)
+describe(dataimp)
+```
+The more relevant information comes from the numeric variables, useCard has a median of 0 and average of 1.772, which confirms thar most people use their credit card once or twice a month.
+Since income was imputed with mean, it has the same value for median, mean and 3rd quart (10.669).
+The mean and median in age are around 40 years old, which has proven to be a relevant age group in credit card investigations.   
+
+### Data visualization 
+
+```{r}
+boxplot(useCard~region,data=dataimp,main="Usage of credit cards by region", col=cm.colors(4))
+```
+Regions 1, 2 and 3 have a pretty similar behavior, meanwhile region 4 has a higher mean and bigger 3rd quart. Regions 5 and 6 have smaller data than the rest, so in those regions credit cards tend to be use less times. 
+
+```{r}
+#Correlation plot 
+dataX<- dataimp%>% select(useCard, income, age) 
+corrplot(cor(dataX),type='upper' , order = 'hclust', addCoef.col='black')
+```
+useCard and income have the strongest relationship, a positive one, which means the higher the income the more a person is able to use a credit card. 
+Income and age have a weak positive relationship, while age with useCard have a weak negative one. 
+
+```{r}
+#Barchar of dPhone/education and useCard by region 
+b1 <-ggplot(data=dataimp,aes(x=reorder(region, useCard),y=useCard,fill=dPhone)) +geom_bar(stat="identity") + coord_flip()
+
+b2 <- ggplot(data=dataimp,aes(x=reorder(region, useCard),y=useCard, fill=education)) + geom_bar(stat="identity") + coord_flip()
+
+grid.arrange(b1, b2, ncol=2)
+```
+Region 1 has accumulatively the most uses of credit cards, followed by 3 and 2. 
+In the dPhone plot, is easy to see that in all of the regions most uses are from people with a smartphone.
+In the education plot, that most of the uses of a credit card comes from people with a higher education in all of the regions. Region 4 has the least people who do no have a higher education using a credit card. 
+
+```{r}
+#Histogram of the usage of credit cards, the dependent variable
+hist(dataimp$useCard, prob=TRUE,main="Frecuency of usage of credit cards",xlab="Use of Credit Cards",col='purple')
+lines(density(dataimp$useCard),col=3,lwd=4)
+```
+As it is easy to see, the dependent variable is extremely right-skewed and even after normalizing this problem persists, but more data transformation may affect the accuracy of the data. 
+
+```{r}
+#Scatterplot of income and useCard
+dataimp %>%
+  ggplot(aes(useCard, income, color=region)) +
+  geom_point(alpha=0.5, size=2) + 
+    geom_smooth(method= lm, color="green", se=TRUE)
+
+```
+There is a positive linear relationship between income and useCard, yet most of the data is located on the lower left corner demonstrating that the greater part of the population has a lower income that limits their usage of the credit cards.
+
+## Which estimation method is going to be conducted to estimate the linear regression model? 
+Multiple regression is the most adequate method to predict the behavior of the dependent variable under this context, since there are multiple independent variables that need to be analyzed at the same time to reach useful insights and make valuable conclusions and observations at the end. 
+
+# Linear Regression Analysis 
+
+## Linear regression models. 
+
+### Hypothesis 
+1) Region 4, Mexico City, will have a greater positive impact on the dependent variable than the other regions
+
+2) Having a phone will have a positive effect on the usage of credit cards
+
+3) Having an higher education will have a positive effect on the usage of credit cards
+
+4) The higher the income, the more times that person uses their credit card
+
+```{r}
+#Data transformation, change 0s
+dataimp = dataimp %>% mutate(new_useCard=useCard+0.01)
+dataimp = dataimp %>% mutate(new_income=income+0.01)
+```
+
+```{r}
+#Creating model using multiple regression 
+
+model1<-lm(useCard~region+income+education,data=dataimp)     
+summary(model1)
+
+model2<-lm(useCard~region+income+education+age ,data=dataimp)
+summary(model2)
+
+model3<-lm(useCard~region+income+education+age+dPhone, data=dataimp)
+summary(model3)
+
+model4<-lm(log(new_useCard)~region+log(new_income)+education+age +dPhone, data=dataimp)
+summary(model4)
+```
+dCard is not use in the models' creation since there it would be to redundant because of the nature of it relationship with the dependent variable 
+
+## Selected model
+
+```{r}
+# Model 1:
+vif(model1)
+bptest(model1)
+AIC(model1)
+
+# Model 2:
+vif(model2)
+bptest(model2)
+AIC(model2)
+
+# Model 3:
+vif(model3)
+bptest(model3)
+AIC(model3)
+```
+Model 1 has no multicollinearity, there is heterocedasticity and has a AIC of 1925.73.
+Model 2 also has no multicollinearity but heterocedasticity and has AIC of 19247.5
+Finally, in model 3 there is not multicollinearity, heterocedasticity is present and a AIC of 19243.8
+
+All of this results are very similar and thanks to AIC I was able to select model 3 as the better one since its value is the lowest. It also has the highest r2, but it should not be considered as a main factor while choosing a model.  
+
+## Results of selected regression model. 
+
+### Predicted values of dependent variable
+
+```{r}
+#Effect plot of region 
+ep1 <- effect(term = "region", mod = model3)
+ep1 <- plot(ep1, xlab = "Regions", ylab = "Percentaje of change in useCard", col.line = "blue")
+ep1
+```
+The estimates of the regions were mainly negative with the exception of region 4, this makes sense since CDMX is highly urbanized area, with a better access to education and good salaries, all of these elements allows the customers to use more times their credit cards. Yet is not as statistically significant as it could be.  
+
+```{r}
+#Effect plot of income
+ep2 <- effect(term = "income", mod = model3)
+ep2 <- plot(ep2, xlab = "Income", ylab = "Percentaje of change in useCard", col.line = "red")
+ep2
+```
+This one was pretty obvious from the start, because a higher income represents more resources that can be use to get multiple credit cards and be able to use them more than once a month. It is statistically significant. 
+
+```{r}
+#Effect plot of education
+ep3 <- effect(term = "education", mod = model3)
+ep3 <- plot(ep3, xlab = "Education", ylab = "Percentaje of change in useCard", col.line = "pink")
+ep3
+```
+Having a higher education has a positive effect on the use of a credit card and it is statistically significant. This one could related to income because most of the times a higher education leads to a at least fair paying job. 
+
+```{r}
+#Effect plot of age
+ep4 <- effect(term = "age", mod = model3)
+ep4 <- plot(ep4, xlab = "Age", ylab = "Percentaje of change in useCard", col.line = "purple")
+ep4
+```
+Age very weak negative effect on useCard and it is not statistically significant, but following this results it could mean that the younger a person is, the more they use a credit card, which could be related to a bad management of finances, since it is so small it cannot be considered relevant. 
+
+```{r}
+#Effect plot of dPhone
+ep5 <- effect(term = "dPhone", mod = model3)
+ep5 <- plot(ep5, xlab = "Phone", ylab = "Percentaje of change in useCard", col.line = "green")
+ep5
+```
+Having a phone is barely statistically significant, this happens because at the end of the day, buying a phone proves certain financial stability and yet most Mexican people have one.  
+
+# Conclusions and Recommendations 
+
+## Main insights  
+Income, education, dPhone and region 4 are the variables that show some level of statistically significance, that means they are the best variables at predicting useCard, yet this does not implies that this is the best model available, changes can be made to obtain a more appropriate model. This information helps to not reject the alternative hypothesis made before, but in reality, thanks to information research at the begging it was easy to create them using other real studies. 
+
+Credit cards from department stores are the most popular ones, but can have the highest interest rates; this mix the inflation we are currently facing could create real harm on customers. 
+
+Overspending is something that can happen if you have a credit card, as well as if you do not have one; therefore financial education needs to be promoted in order for people to loose the fear of having a credit cards.
+
+In the south and center of Mexico there is a bigger opportunity area than in the rest of the country to incentive the usage of credit cards. 
+
+## Recommendation based  on  the  selected  results
+This is a general study, to have better and more specific results it is necessary to do a proper segmentation by age, financing type, precise level of education, if the person has a formal or informal job, among others; but one variable that I think would be extremely helpful is a different geographic division (urban and rural).
+
+Having a phone could be a new way to access formal financing, therefore other elements that could possibly play a part on how to make easier having a credit card and actually using it should be taken into consideration; a likert scale of how scare is the person of being in debt can be an example on what to add; demographic and culture related variables could be used to create a model that achieves an even better model that would help to solve this problem.
+
+Banks could target younger generations and provide them with tools on how to manage money wisely so that in the future more responsible customers can exists. 
+
+I recommend making a parallel study that explains why people do not have any type of financing or why they only have informal, in order to understand on a deeper level their circumstances and factors that lead them there, so financial institutions can create preventive measures. 
+
+Finally, the factors that increase being given a credit card are not representative of our real population and a credit card should be created taking into consideration this, as well as no just profiting off them such as others have done. 
+
+# Bibliography
+
+Passport. (2021). Credit cards in Mexico. Website https://www.euromonitor.com/credit-cards-in-mexico/report
+ 
+Rodríguez, D. (2022). Tarjetas de crédito de tiendas: las favoritas de los mexicanos para endeudarse. Website:  https://elpais.com/mexico/economia/2022-05-21/tarjetas-de-credito-de-tiendas-las-favoritas-de-los-mexicanos-para-endeudarse.html 
+ 
+ 
+EDIF. (2021). El crédito en México. Website: https://www.gob.mx/cms/uploads/attachment/file/624795/Estudio_Credito.pdf
+ 
+Torres, Y. (2022). ¿Usas tarjetas de crédito? Evita que el alza en las tasas de interés de Banxico te afecte. Website: https://www.eleconomista.com.mx/finanzaspersonales/Usas-tarjetas-de-credito-Evita-que-el-alza-en-las-tasas-de-interes-de-Banxico-te-afecte-20220626-0028.html
+ 
+Procuraduría Federal del Consumidor. (2019). Tarjetas departamentales. La otra cara del crédito. Website: https://www.gob.mx/profeco/documentos/tarjetas-departamentales-la-otra-cara-del-credito?state=published
+ 
+IMCO. (2020). EL ROMPECABEZAS DE LA INCLUSIÓN FINANCIERA EN MÉXICO. Website: https://imco.org.mx/el-rompecabezas-de-la-inclusion-financiera-en-mexico/
+ 
+Indeed. (2021). Understanding When To Use Linear Regression. Website: https://www.indeed.com/career-advice/career-development/when-to-use-linear-regression#:~:text=Understanding%20linear%20regression%20is%20important,operations%20and%20detailed%20research%20materials.
+
+IBM. (n/d). About Linear Regression. Website: https://www.ibm.com/topics/linear-regression#:~:text=Resources-,What%20is%20linear%20regression%3F,is%20called%20the%20independent%20variable.
