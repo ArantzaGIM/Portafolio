@@ -1,0 +1,509 @@
+---
+title: "Evidence"
+author: "Arantza Isaías"
+date: "3/5/2022"
+output: 
+  html_document:
+    theme: paper
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    number_sections: TRUE
+    toc_float:
+      smooth_scroll: FALSE
+      collapsed: FALSE
+---
+
+```{r libraries, include=FALSE}
+#Libraries needed
+library(dplyr)
+library(stringr)
+library(readxl)
+library(assertive)
+library(ggplot2)
+library(lubridate)
+library(forcats)
+library(visdat)
+library(stringdist)
+library(fuzzyjoin)
+library(gapminder)
+library(e1071)
+library(datasets)
+library(tidyr)
+library(DataExplorer)
+library(tidyverse)
+library(ggplot2)
+library(mice)
+library(tm) 
+library(SnowballC)
+library(wordcloud2)
+library(RColorBrewer)
+library(qdap)
+
+#Import dataset
+movies <- read.csv("C:/Users/dell/Documents/R_programa/movies_metadata.csv")
+```
+# ABSTRACT
+After analyzing the dataset, the insights that were found are that a movie being part a collection does not helps it to be more popular and having multiple productions companies tends to mean less revenue and budget than 4 companies or less; the Mexican film industry has grown since 2000 and this could be related to the globalization that we live in. At last, Lifetime movies of young women have all the buzzwords to catch the attention of the public, since they tend to be used the most often. Drama is the most common genre, this explains that it gets the biggest amount of budget.
+Even though the success factors were identify, the reality is that the director, actors and everyone involucrated in the movie has to understand how to play with them and give them a fresh touch. 
+
+
+# INTRODUCTION
+In the present document an analysis and transformation of data is held, this data is the dataframe movies_metadata. First, an analysis of the information is done in order to identify errors and aspects that should be change; after that the data is transformed accordingly and finally another deeper analysis is done.
+
+# OBJECTIVES
+As a student, my goal is to prove and show the new knowledge acquire through out this period of 5 weeks about r programming.
+
+# DATA DESCRIPTION
+
+## GENERAL REVIEW
+```{r review}
+#Glimpse is used to explore the dataset
+glimpse(movies)
+#At first glance, the variables belongs_to_collection, genres, production_companies, production_countries and spoken_languages are dirty because they contain several symbols that make impossible to analyze the information of a movie.
+```
+
+```{r cl, include= FALSE}
+#There are more than 90 languages, but since most of them have a low count, it would be more efficient to group them 
+movies %>% count(original_language) %>% arrange(desc(n))
+```
+
+## INICIAL CORRECTIONS
+To have a proper analysis, it is necessary to make quick corrections.
+
+### DROP ROWS
+```{r di}
+#These rows are full of errors that would take a lot of time to correct and cause errors while making a data analysis; since they are only 3 it is better to just eliminate them early on. Their titles are Midnight Man, Mardock Scramble: The Third Exhaust, and Avalanche Sharks, this information is in the variable poster_path.
+
+movies <- movies[!(movies$poster_path =="Midnight Man" | 
+                     movies$poster_path=="Mardock Scramble: The Third Exhaust"| 
+                     movies$poster_path=="Avalanche Sharks"),]
+```
+
+### CHANGE DATATYPES
+```{r cdt}
+#This action will allow to analyze these variables properly.
+
+#Logical
+movies$adult <- as.logical(movies$adult)
+movies$video <- as.logical(movies$video)
+
+#Numeric
+movies$budget <- as.numeric(movies$budget)
+movies$popularity <- as.numeric(movies$popularity)
+
+#Date
+movies$release_date <- as.Date(movies$release_date)
+
+#Factor
+movies$status <- as.factor(movies$status)
+```
+
+## DUPLICATES
+```{r dup}
+#There are 17 duplicates that need to be eliminated
+sum(duplicated(movies))
+```
+
+```{r pdup, include=FALSE}
+#Some partial duplicates where identified in id and after viewing these specific movies it turns out that they are full duplicates with a different value in popularity. 
+movies %>% count(id) %>% filter(n > 1)
+
+```
+
+## OUT OF RANGE VALUES
+```{r or}
+#Movies can have high budgets due to factors like visual effects, so high outliers will not be imputed; whereas a budget of 0 is unlikely and in most cases incorrect (Information checked on the internet). 
+ggplot(movies, aes(budget)) + geom_histogram(fill="slateblue")
+summary(movies$budget)
+```
+
+```{r}
+#This variable is supposed to be inside the range 0 to 100, but most values are between 0 and 1, there are also outliers like 547 that need to be corrected.   
+ggplot(movies, aes(popularity)) + geom_histogram(fill="royalblue")
+summary(movies$popularity)
+```
+
+```{r}
+#A great number of movies have 0 revenue, even though in reality they do have revenue. 
+ggplot(movies, aes(revenue)) + geom_histogram(fill="blue4")
+summary(movies$revenue)
+```
+
+```{r}
+#Once again, 0 is an incorrect value in this variable (checked on the internet), but 1 and higher numbers are real.  
+ggplot(movies, aes(runtime)) + geom_histogram(fill="steelblue1")
+summary(movies$runtime)
+```
+```{r}
+#0, once again, is not a correct value according to an investigation on the internet. 
+ggplot(movies, aes(vote_average)) + geom_histogram(fill="mediumblue")
+summary(movies$vote_average)
+```
+
+```{r}
+#The 0s need to be imputed to another number, because most, if not all, of the movies with 0 in this variable actually have mutiple votes registred. 
+ggplot(movies, aes(vote_count)) + geom_histogram(fill="dodgerblue")
+summary(movies$vote_count)
+```
+
+## MISSING VALUES
+```{r}
+#Not considering the 0, there are also multiple missing values in the dataframe that need to be imputed. 
+vis_miss(movies, warn_large_data = FALSE)
+```
+
+# DATA CLEANING CONDUCTED
+
+## DUPLICATES
+```{r}
+#Eliminate the duplicates 
+movies <- distinct(movies)
+```
+
+```{r}
+#Eliminate partial duplicates
+movies <- movies %>% group_by(id) %>% filter (! duplicated(id))
+```
+
+## DIRTY VARIABLES
+```{r}
+#Clean genres
+gc  <- str_split_fixed(movies$genres, "'", 49)
+
+##Selecting the 3 first genres
+genres_clean <- as.data.frame(gc) %>% select(V6, V12, V18) %>% rename(genre_1 = V6, genre_2 = V12, genre_3 = V18)
+
+##Calculating how many genres each movies has
+NoG <- as.data.frame(gc) %>% select(V6, V12, V18, V24, V30, V36, V42, V48)
+
+NoG[NoG == ""] <- 0
+NoG[NoG != 0] <- 1
+
+NoG <- NoG %>% mutate_at(c("V6", "V12", "V18", "V24", "V30", "V36", "V42", "V48"), as.numeric)
+
+NoG <- NoG %>% mutate(Number_genres= rowSums(NoG)) %>% select(Number_genres)
+
+##Joining them to the dataset
+genres_clean["id"] <- movies$id
+NoG["id"] <- movies$id
+movies <- full_join(movies, genres_clean, by="id") %>% select(-genres)
+movies <- full_join(movies, NoG, by="id")
+
+```
+
+```{r}
+#Clean production companies
+pcom <- str_split_fixed(movies$production_companies, "'", 200)
+
+##Selecting the first one
+production_companies_clean <- as.data.frame(pcom) %>% select(V4) %>% rename(main_production_company = V4)
+
+##Calculating how many production companies each movies has
+NoPcom <- as.data.frame(pcom) %>% select(V4, V10, V16, V22, V28, V34, V40, V46, V52, V58, V64, V70, V76, V82, V88, V94, V100, V106, V112, V118, V124, V130, V136, V142, V148, V154)
+
+NoPcom[NoPcom == ""] <- 0
+NoPcom[NoPcom != 0] <- 1
+
+NoPcom <- NoPcom %>% mutate_at(c("V4", "V10", "V16", "V22", "V28", "V34", "V40", "V46", "V52", "V58", "V64", "V70", "V76", "V82", "V88", "V94", "V100", "V106", "V112", "V118", "V124", "V130", "V136", "V142", "V148", "V154"), as.numeric)
+
+NoPcom <- NoPcom %>% mutate(Number_production_companies= rowSums(NoPcom)) %>% select(Number_production_companies)
+
+##Joining them to the dataset
+production_companies_clean["id"] <- movies$id
+NoPcom["id"] <- movies$id
+
+movies <- full_join(movies, production_companies_clean, by="id") %>% select(-production_companies)
+movies <- full_join(movies, NoPcom, by="id")
+```
+
+```{r}
+#Clean production countries
+pcou <- str_split_fixed(movies$production_countries, "'", 202) 
+
+##Selecting the first one
+production_countries_clean <- as.data.frame(pcou) %>% select(V8) %>% rename(main_production_country = V8)
+
+##Calculating how many production companies each movies has
+NoPcou <- as.data.frame(pcou) %>% select(V8, V16, V24, V32, V40, V48, V56, V64, V72, V80, V88, V96, V104, V112, V120, V128, V136, V144, V152, V160, V168, V176, V184, V192, V200)
+
+NoPcou[NoPcou == ""] <- 0
+NoPcou[NoPcou != 0] <- 1
+
+NoPcou <- NoPcou %>% mutate_at(c("V8", "V16", "V24", "V32", "V40", "V48", "V56", "V64", "V72", "V80", "V88", "V96", "V104", "V112", "V120", "V128", "V136", "V144", "V152", "V160", "V168", "V176", "V184", "V192", "V200"), as.numeric)
+
+NoPcou <- NoPcou %>% mutate(Number_production_countries= rowSums(NoPcou)) %>% select(Number_production_countries)
+
+##Joining them to the dataset
+production_countries_clean["id"] <- movies$id
+NoPcou["id"] <- movies$id
+
+movies <- full_join(movies, production_countries_clean, by="id") %>% select(-production_countries)
+movies <- full_join(movies, NoPcou, by="id")
+
+```
+
+```{r}
+#Clean spoken languages
+sl <- str_split_fixed(movies$spoken_languages, "'", 155)
+
+##Selecting the first one
+spoken_languages_clean <- as.data.frame(sl) %>% select(V8) %>% rename(main_spoken_language = V8)
+
+##Calculating how many production companies each movies has
+NoSl <- as.data.frame(sl) %>% select(V8, V16, V24, V32, V40, V48, V56, V64, V72, V80, V88, V96, V104, V112, V120, V128, V136, V144, V152)
+
+NoSl[NoSl == ""] <- 0
+NoSl[NoSl != 0] <- 1
+
+NoSl <- NoSl %>% mutate_at(c("V8", "V16", "V24", "V32", "V40", "V48", "V56", "V64", "V72", "V80", "V88", "V96", "V104", "V112", "V120", "V128", "V136", "V144", "V152"), as.numeric)
+
+NoSl <- NoSl %>% mutate(Number_spoken_languages= rowSums(NoSl)) %>% select(Number_spoken_languages)
+
+##Joining them to the dataset
+spoken_languages_clean["id"] <- movies$id
+NoSl["id"] <- movies$id
+
+movies <- full_join(movies, spoken_languages_clean, by="id") %>% select(-spoken_languages)
+movies <- full_join(movies, NoSl, by="id")
+
+```
+
+```{r}
+#Clean belongs to collection
+movies <- movies %>% mutate(part_of_collection = (belongs_to_collection != "")) %>%  select(-belongs_to_collection)
+```
+
+## OUT OF RANGE VALUES
+
+```{r}
+#Converting the 0s to NA values so they can be imputed with mice in the next section
+movies$budget[movies$budget == 0] <- NA
+movies$revenue[movies$revenue == 0] <- NA
+movies$runtime[movies$runtime == 0] <- NA
+movies$popularity[movies$popularity == 0] <- NA
+movies$vote_average[movies$vote_average == 0] <- NA
+movies$vote_count[movies$vote_count == 0] <- NA
+movies$status[movies$status == ""] <- NA
+```
+
+```{r}
+#Popularity is cleaned by multiplying if it a small number, change to 100 if it is higher than this number (the movies with a popularity over 100 are extremely popular and that is the reason to change it to 100 and not divide it by 10) or transform into a NA if it is a really small number, this means lower than 0.2. 
+movies <- movies %>% 
+  mutate(pc = ifelse(popularity <= 1, popularity*10, popularity)) %>%
+  mutate(pc2 = ifelse(pc <= 1.999999, popularity/10, pc)) %>%
+  mutate(popularity_clean = ifelse(pc2 >= 101 , 100 , pc2)) %>% select(-c(pc, pc2, popularity))
+
+movies$popularity_clean[movies$popularity_clean <= 0.999999] <- NA
+```
+
+
+## MISSING DATA
+```{r}
+#After checking if the cleaning has affected the missing values, we are able to see how many values are actually missing now that the 0 have been transform. 
+vis_miss(movies, warn_large_data = FALSE)
+```
+
+```{r mice, warning = FALSE}
+#Mice is used to imputed, specifically the method cart since it imputes all types of variables and uses regressions trees; for me, cart was the most effective imputation method. The only disadvantage is that it changes the logical variables into 0 and 1, so they need to be changed again. 
+mcart <- mice(movies[ ,c(2,11, 12, 13, 16, 17, 18, 30) ], m=1, maxit=5, meth ='cart', seed=100)
+
+mcart <- complete(mcart,1)
+
+mcart["id"] <- movies$id
+
+movies <- movies %>% select (-c(budget, revenue, runtime, video, vote_average, vote_count, popularity_clean, status))
+movies <- full_join(movies, mcart, by="id")
+
+movies$video[movies$video == 0] <- "FALSE"
+movies$video[movies$video == 1] <- "TRUE"
+```
+
+```{r}
+#To impute spoken languages I used another column of the dataframe. 
+other_categories <- c("hi", "ko", "zh", "sv", "pt", "cn", "fi", "nl", "da", "pl", "tr", "cs", "el", "no", "fa", "hu", "ta", "th", "he", "sr", "ro", "te", "ar", "ml", "xx", "bn", "hr", "mr", "et", "is", "tl", "id", "ka", "lv", "sl", "uk", "bs", "ca", "ab", "bg", "vi", "lt", "sk", "ur", "nb", "mk", "ms", "sh", "sq", "wo", "bm", "eu", "kk", "kn", "ku", "ky", "af", "am", "bo", "iu", "lo", "mn", "ne", "pa", "ps", "ay", "cy", "eo", "fy", "gl", "hy", "jv", "la", "lb", "mt", "qu", "rw", "si", "sm", "tg", "uz", "zu", "")
+
+```
+```{r car, include=FALSE}
+library(car)
+```
+
+```{r}
+#The function that I investigated uses the library car and it allowed me to change multiple values to just one in a quick way. 
+movies$original_language <- recode (movies$original_language, "other_categories = 'Other'")
+
+movies <- movies %>% 
+  mutate(mc = ifelse (original_language == "Other", original_language, main_spoken_language))
+
+movies <- movies %>% 
+  mutate(main_spoken_language_clean = ifelse (mc == "", original_language, mc))
+
+#The imputed languages are changed to accommodate the format of the column. 
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "en"] <- "English"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "it"] <- "Italiano"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "ru"] <- "Pусский"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "es"] <- "Español"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "ja"] <- "日本語"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "de"] <- "Deutsch"
+movies$main_spoken_language_clean[movies$main_spoken_language_clean == "fr"] <- "Français"
+
+#The extra columns are eliminated. 
+movies <- movies %>% select (-c(mc, main_spoken_language, original_language))
+```
+
+
+
+```{r}
+#Now that all movies have at least one language, this need to be reflected in the acumulative column. 
+movies <- movies %>% 
+  mutate(Number_spoken_languages_clean = ifelse (Number_spoken_languages == 0, 1, Number_spoken_languages))
+
+movies <- movies %>% select (-Number_spoken_languages)
+```
+
+## NEW COLUMN
+```{r}
+#Another variable is created in order to have a new way to analyze the final information. 
+
+##Functions to be able to group by realese year
+release_year <- str_split_fixed(movies$release_date, "-", n = Inf)
+release_year <- release_year[,1]
+release_year <- as.data.frame(release_year)
+movies <- cbind(movies, release_year)
+
+##Grouping by realease year
+movies <- movies %>% mutate(year_range = ifelse(release_year  %in% c(1800:1989), "Before 90s", (ifelse (release_year %in% c(1990:1994),"1990 to 1994", (ifelse(release_year %in% c(1995:1999), "1995 to 1999", (ifelse (release_year %in% c(2000:2022), "After 2000s", "N/A")))))))) 
+
+```
+## SKEWNESS
+```{r}
+#These 2 variables have the highest skewness
+skewness(movies$popularity_clean)
+skewness(movies$vote_count)
+```
+```{r}
+#They are imputed with a logarithmic function, with this change the distribution would be more normal. 
+movies <- movies %>% mutate(log_popularity = log(popularity_clean))
+movies <- movies %>% mutate(log_vote_count = log(vote_count))
+```
+
+## FINAL CORRECTIONS 
+```{r}
+#Drop extra column
+movies <- movies %>% select (-original_title)
+```
+
+```{r}
+#Check datatypes
+glimpse(movies)
+
+#Correct them if necessary 
+movies$video <- as.logical(movies$video)
+movies$release_year <- as.numeric(movies$release_year)
+```
+
+
+# TECNIQUES OF VISUALIZATION 
+## GENERAL
+
+```{r}
+#A bar chart is created with the variables popularity, part of collection and genre 1. 
+ggplot(movies, aes(x = mean(log_popularity), fill = part_of_collection )) + 
+geom_bar(position="dodge") + facet_wrap(~genre_1)
+```
+
+```{r}
+#A correlations is made between revenue and budget, but it also is separated by the number of production companies. 
+ggplot(movies, aes(y = revenue, x = budget)) +  geom_point() + facet_wrap(~Number_production_companies) + geom_smooth(method = "lm", se = TRUE)
+```
+```{r rb, include=FALSE}
+table(movies$revenue, movies$budget)
+```
+
+```{r}
+#A chart that shows the revenue obtain trough out the years
+ggplot(movies, aes(x = release_year, y= revenue)) +  geom_bin_2d()
+```
+
+```{r}
+#This bar chart shows the budget that each genre by their status 
+ggplot(data = movies, aes(x = mean(budget), y = genre_1)) +  geom_col(fill = "cyan") + facet_wrap(~status)
+```
+
+
+## MEXICO
+```{r}
+#A dataframe of Mexico is created in order to understand the information that occurs in our country. 
+Mexico <- movies[(movies$main_production_country == "Mexico"),]
+Mexico <- (Mexico %>% arrange(desc(revenue)))
+```
+
+```{r me, include=FALSE}
+#This table contains relevant financial values. 
+options(scipen=999, digits = 3)
+table(Mexico$title, Mexico$budget, Mexico$revenue)
+```
+
+```{r}
+#This is a correlation between budget and popularuty in Mexico.
+ggplot(data = Mexico, aes(y = budget, x = log_popularity)) +  geom_point()+
+  geom_smooth(method = "lm", se = TRUE) + facet_wrap(~year_range)
+```
+
+
+```{r}
+#This histogram counts the movies than have been film in Mexico. 
+ggplot(Mexico, aes(x = release_year)) +  geom_histogram(fill="skyblue")
+```
+
+```{r}
+#With this chart we are able to see what are the most common languages of the movies made in Mexico
+ggplot(Mexico, aes(x=Number_genres, fill=main_spoken_language_clean )) +  geom_density(alpha = 0.3) + facet_wrap(~main_spoken_language_clean)
+```
+
+## DATA MINNING 
+```{r wc, include=FALSE}
+#A wordcloud is created to analyze the most common words on overview. 
+
+## Corrections to be able to analyze overview
+movies$overview <- tolower(movies$overview)
+movies$overview <- tm::removeNumbers(movies$overview)
+movies$overview <- str_replace_all(movies$overview, "  ", "")
+movies$overview <- str_replace_all(movies$overview, pattern = "[[:punct:]]", " ")
+movies$overview <- tm::removeWords(x = movies$overview, stopwords(kind = "SMART"))
+
+corpus <- Corpus(VectorSource(movies$overview)) 
+tdm <- TermDocumentMatrix(corpus)
+
+freq_terms(text.var = movies$overview, top = 50) 
+x <- freq_terms(text.var = movies$overview, top = 50)
+as.matrix.data.frame(x)
+```
+
+```{r}
+#Wordcloud with the most common words in overview
+wordcloud2(x, size=1, color='random-light', backgroundColor="midnightblue")
+```
+
+# FINDINGS
+The US has produced the most movies in the world, but Mexico has a positive tendency that stars around the early 2000s, this means that the film industry in Mexico is more popular than ever and movies with their main language as French, German, Italian and English are being produced here, proving that there is international interest. 
+Generally speaking, being part of a collection is of no use in most genres, but in family, mystery and science fiction there seems to be an equal level of popularity whether is part of a collection or no. What I mean is that Mexico has the opportunity of producing successful movies and should make the most of it. 
+It is interesting that movies with 10 production companies or more have a lower budget and revenues than movies with none; the “sweet spot” is 3 companies or even 4, since their revenue is higher and commonly have a bigger budget.
+The word life is the most popular in overview, this means that the public is interested in connecting with a character along their wholes lives and not just a part of it; woman is the gender most repeated, so it their stories the ones the audience is more eager to get to know; finally young protagonists are the most relevant. 
+Drama is the most common genre but it is also the one that gets the greatest amount of budget. 
+Movies have only become more popular over the years, but this might have changed due to social distancing. It would be interesting to see how this popularity, probably, has dropped. 
+
+A successful movie combines all of the previous characteristics, meaning it tells the life of woman since her younger years, highlighting the love part and trials and tribulations, which can be describe as drama; this makes it possible for the audience to have a connection with the main character and actually enjoy the movie.
+It also seems that the more companies, from 5 and over, tend to restrict more the budget and the revenue is just as low. 
+
+
+# CONCLUSIONS
+Mexico's growth can be used as an advantage now because the world is more open to consume international content, like proven with Squid's Games that is from South Korea. Mexico can use analysis like this one to understand more how to have high revenues in other territories. 
+Production companies should focus on making singular quality movies rather than collections, because they are not more popular.
+Stories of the life of different young women are particularly popular, so the companies should look for this type of story. 
+In the last years everything has changed so much that this information is not completely useful; if deeper analysis is require then the information needs to be updated. 
+The movies that follow the success factors identified most of the time generate revenues guaranteed, but the reality is that the movies with a twist, with an "outlier" factor, those with high risk to fail are the ones that end up being remembered; then, my suggestion is to follow 1 or 2 of the success factors but to add a twist, like Gone Girl, which is a story of a young woman and her husband, love interest, but with an additional twist of her being a sociopath and incriminating her death on her husband. These details are the ones that create a classic rather than momentary success. 
+
+# BIBLIOGRAPHY
+
+Centro Internacional de Casos. (2022). Successful movies?  from Tecnológico de Monterrey. Retrieved on March 3rd 2020. Website: https://cic.tec.mx/casos/index.php/successful-movies-2/ 
